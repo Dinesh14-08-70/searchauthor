@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Author Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f3ec; --card:#fffdf9; --ink:#2a2420; --muted:#7a6f66; --line:#e6ddd0;
+    --accent:#8b3a2b; --accent-soft:#f3e3dc; --gold:#b88a3e; --shadow:0 2px 14px rgba(60,40,20,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 Inter,system-ui,sans-serif}
+  h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:700;margin:0;line-height:1.2}
+  a{color:var(--accent)}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+  header{padding:40px 0 24px;text-align:center}
+  header h1{font-size:2.4rem;letter-spacing:-.5px}
+  header p{color:var(--muted);margin:6px 0 0}
+  header .credit{font-family:Fraunces,Georgia,serif;font-style:italic;color:var(--gold);font-size:14px;letter-spacing:.03em}
+
+  /* Search */
+  .search{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+  .modes{display:inline-flex;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:14px;flex-wrap:wrap}
+  .modes button{border:0;background:none;padding:8px 16px;border-radius:7px;font:inherit;font-weight:500;color:var(--muted);cursor:pointer}
+  .modes button.active{background:var(--card);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .search form{display:flex;gap:10px}
+  .search input{flex:1;padding:13px 16px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:#fff;min-width:0}
+  .search input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:0 22px;font:inherit;font-weight:600;cursor:pointer}
+  .btn:hover{filter:brightness(1.1)}
+  .hint{color:var(--muted);font-size:13px;margin-top:10px}
+  .hint a{cursor:pointer}
+
+  #status{margin:28px 0;text-align:center;color:var(--muted)}
+  .spinner{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error{color:var(--accent)}
+
+  /* Candidate results */
+  .results h2{font-size:1.3rem;margin:24px 0 12px}
+  .cand-list{display:grid;gap:10px}
+  .cand{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;transition:.15s}
+  .cand:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .cand img,.cand .ph{width:46px;height:62px;object-fit:cover;border-radius:5px;background:var(--accent-soft);flex-shrink:0}
+  .cand .t{font-weight:600}
+  .cand .s{color:var(--muted);font-size:13px}
+  .cand .authors{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .chip-btn{border:1px solid var(--accent);color:var(--accent);background:none;border-radius:20px;padding:2px 10px;font:inherit;font-size:13px;cursor:pointer}
+  .chip-btn:hover{background:var(--accent);color:#fff}
+
+  /* Author profile */
+  .profile{margin-top:28px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .found-note{background:var(--accent-soft);padding:10px 24px;font-size:14px}
+  .p-head{display:flex;gap:26px;padding:26px}
+  .portrait{width:170px;height:220px;border-radius:12px;object-fit:cover;background:linear-gradient(135deg,var(--accent-soft),#eadfce);flex-shrink:0;display:flex;align-items:center;justify-content:center;font:700 3rem Fraunces,serif;color:var(--accent)}
+  .p-head h2{font-size:2rem}
+  .p-desc{color:var(--muted);margin:4px 0 16px}
+  .facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px 22px}
+  .fact .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+  .fact .v{font-weight:500}
+  .fact.wide{grid-column:1/-1}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px}
+  .chip{background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:2px 10px;font-size:13px;font-weight:500}
+  .chip.gold{background:#f6ecd8;color:#7d5a1e}
+  .bio{padding:0 26px 22px;border-top:1px solid var(--line)}
+  .bio h3,.books h3{font-size:1.2rem;margin:20px 0 8px}
+  .bio p{margin:0 0 10px}
+  .src{font-size:12px;color:var(--muted)}
+  .links{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;margin-top:8px}
+  details summary{cursor:pointer;color:var(--accent);font-size:13px;margin-top:4px}
+
+  /* Books */
+  .books{padding:0 26px 26px;border-top:1px solid var(--line)}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .tab{white-space:nowrap;border:0;background:none;padding:9px 14px;font:inherit;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-7px}
+  .tab .n{background:var(--paper);border-radius:10px;padding:0 7px;font-size:12px;margin-left:4px}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab.active .n{background:var(--accent-soft)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:18px}
+  .book{cursor:pointer;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit}
+  .cover{aspect-ratio:2/3;width:100%;border-radius:6px;object-fit:cover;box-shadow:0 3px 10px rgba(0,0,0,.15);transition:.2s;background:#ddd}
+  .book:hover .cover{transform:translateY(-4px);box-shadow:0 8px 18px rgba(0,0,0,.2)}
+  .cover.ph{display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;color:#fff;font:600 14px/1.3 Fraunces,serif}
+  .book .bt{font-weight:600;font-size:14px;margin-top:8px;line-height:1.3}
+  .book .by{color:var(--muted);font-size:12px}
+  .empty{color:var(--muted);padding:20px 0}
+
+  /* Modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(30,20,10,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal-bg.open{display:flex}
+  .modal{background:var(--card);border-radius:18px;max-width:760px;width:100%;max-height:90vh;overflow:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal .x{position:absolute;top:12px;right:14px;border:0;background:var(--paper);width:34px;height:34px;border-radius:50%;font-size:20px;cursor:pointer;color:var(--muted)}
+  .m-body{display:flex;gap:24px;padding:28px}
+  .m-body .cover{width:180px;flex-shrink:0;align-self:flex-start}
+  .m-body h2{font-size:1.6rem;padding-right:30px}
+  .m-meta{color:var(--muted);font-size:14px;margin:4px 0 14px}
+  .summary p{margin:0 0 10px}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:40px 0}
+
+  @media (max-width:640px){
+    .p-head,.m-body{flex-direction:column;align-items:center;text-align:center}
+    .facts{text-align:left}
+    .portrait{width:140px;height:180px}
+    .m-body .cover{width:150px;align-self:center}
+    .m-body{text-align:left}
+    .search form{flex-direction:column}
+    .btn{padding:12px}
+  }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <h1>Author Finder</h1>
+  <p>Search by author name, book title or ISBN to explore a writer's life and works</p>
+  <p class="credit">Designed by Param</p>
+</header>
+
+<main class="wrap">
+  <section class="search">
+    <div class="modes" role="tablist">
+      <button class="active" data-mode="author">Author name</button>
+      <button data-mode="title">Book title</button>
+      <button data-mode="isbn">ISBN</button>
+    </div>
+    <form id="searchForm">
+      <input id="q" type="text" autocomplete="off" placeholder="e.g. Chinua Achebe">
+      <button class="btn" type="submit">Search</button>
+    </form>
+    <div class="hint" id="hint"></div>
+  </section>
+
+  <div id="status"></div>
+  <section id="results" class="results"></section>
+  <section id="author"></section>
+</main>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="x" id="closeModal" aria-label="Close">&times;</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<footer>Designed by Param · Data from Open Library, Wikidata &amp; Wikipedia. Details can be incomplete for lesser-known authors.</footer>
+
+<script>
+const OL = 'https://openlibrary.org';
+const WD = 'https://www.wikidata.org/w/api.php';
+const WP = 'https://en.wikipedia.org';
+
+const $ = s => document.querySelector(s);
+const enc = encodeURIComponent;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let mode = 'author';
+let reqId = 0;              // guards against stale responses
+let currentBooks = [];      // books of the author on screen
+let currentAuthorName = '';
+
+const HINTS = {
+  author: {ph:'e.g. Chinua Achebe', ex:['Chinua Achebe','Agatha Christie','Haruki Murakami','Jane Austen']},
+  title:  {ph:'e.g. Things Fall Apart', ex:['Things Fall Apart','The Hobbit','Norwegian Wood','Pride and Prejudice']},
+  isbn:   {ph:'e.g. 9780385474542', ex:['9780385474542','9780547928227','9780141439518']}
+};
+
+function setMode(m){
+  mode = m;
+  document.querySelectorAll('.modes button').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  $('#q').placeholder = HINTS[m].ph;
+  $('#hint').innerHTML = 'Try: ' + HINTS[m].ex.map(x => `<a data-ex="${esc(x)}">${esc(x)}</a>`).join(' · ');
+}
+document.querySelectorAll('.modes button').forEach(b => b.onclick = () => { setMode(b.dataset.mode); $('#q').focus(); });
+$('#hint').addEventListener('click', e => { const x = e.target.dataset.ex; if (x){ $('#q').value = x; search(); } });
+$('#searchForm').addEventListener('submit', e => { e.preventDefault(); search(); });
+setMode('author');
+
+async function getJSON(url){
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Request failed (' + r.status + ')');
+  return r.json();
+}
+
+function status(html, loading){
+  $('#status').innerHTML = html ? (loading ? '<div class="spinner"></div>' : '') + html : '';
+}
+
+/* ---------------- SEARCH ---------------- */
+async function search(){
+  const q = $('#q').value.trim();
+  if (!q) return;
+  const my = ++reqId;
+  $('#results').innerHTML = ''; $('#author').innerHTML = '';
+  status('Searching…', true);
+  try {
+    if (mode === 'author') await searchAuthor(q, my);
+    else if (mode === 'title') await searchTitle(q, my);
+    else await searchIsbn(q, my);
+  } catch (err) {
+    if (my === reqId) status(`<span class="error">Something went wrong: ${esc(err.message)}. Please check your connection and try again.</span>`);
+  }
+}
+
+async function searchAuthor(q, my){
+  const d = await getJSON(`${OL}/search/authors.json?q=${enc(q)}&limit=12`);
+  if (my !== reqId) return;
+  const docs = (d.docs || []).filter(a => a.work_count > 0);
+  if (!docs.length) return status('No authors found with that name.');
+  if (docs.length === 1) return loadAuthor(docs[0].key);
+  status('');
+  $('#results').innerHTML = `<h2>${docs.length} matching authors — pick one</h2><div class="cand-list">` +
+    docs.map(a => {
+      const dates = [a.birth_date, a.death_date].filter(Boolean).join(' – ');
+      return `<div class="cand" data-akey="${esc(a.key)}">
+        <img src="https://covers.openlibrary.org/a/olid/${esc(a.key)}-S.jpg?default=false" onerror="this.outerHTML='<div class=ph></div>'" alt="">
+        <div><div class="t">${esc(a.name)}</div>
+        <div class="s">${dates ? esc(dates) + ' · ' : ''}${a.work_count} works${a.top_work ? ' · Best known for <i>' + esc(a.top_work) + '</i>' : ''}</div></div>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+async function searchTitle(q, my){
+  const d = await getJSON(`${OL}/search.json?title=${enc(q)}&fields=key,title,author_name,author_key,first_publish_year,cover_i,edition_count&limit=12`);
+  if (my !== reqId) return;
+  const docs = (d.docs || []).filter(b => b.author_key?.length);
+  if (!docs.length) return status('No books found with that title.');
+  if (docs.length === 1 && docs[0].author_key.length === 1)
+    return loadAuthor(docs[0].author_key[0], `Found via the book <b>${esc(docs[0].title)}</b>`);
+  status('');
+  $('#results').innerHTML = `<h2>Books matching “${esc(q)}” — choose the author</h2><div class="cand-list">` +
+    docs.map(b => `<div class="cand" style="cursor:default">
+        ${b.cover_i ? `<img src="https://covers.openlibrary.org/b/id/${b.cover_i}-S.jpg" alt="">` : '<div class="ph"></div>'}
+        <div><div class="t">${esc(b.title)}</div>
+        <div class="s">${b.first_publish_year ? 'First published ' + b.first_publish_year + ' · ' : ''}${b.edition_count || 1} editions</div>
+        <div class="authors">${b.author_key.map((k, i) => `<button class="chip-btn" data-akey="${esc(k)}" data-via="${esc(b.title)}">${esc(b.author_name?.[i] || 'Author')}</button>`).join('')}</div></div>
+      </div>`).join('') + '</div>';
+}
+
+async function searchIsbn(q, my){
+  const isbn = q.replace(/[^0-9Xx]/g, '').toUpperCase();
+  if (isbn.length !== 10 && isbn.length !== 13) return status('<span class="error">An ISBN has 10 or 13 digits — please check the number.</span>');
+  let title = '', akey = null;
+  const d = await getJSON(`${OL}/search.json?isbn=${isbn}&fields=key,title,author_key,author_name&limit=1`);
+  if (d.docs?.[0]?.author_key?.length){ akey = d.docs[0].author_key[0]; title = d.docs[0].title; }
+  else {
+    // fall back to the edition record
+    try {
+      const ed = await getJSON(`${OL}/isbn/${isbn}.json`);
+      title = ed.title || '';
+      if (ed.authors?.[0]?.key) akey = ed.authors[0].key.split('/').pop();
+      else if (ed.works?.[0]?.key){
+        const w = await getJSON(`${OL}${ed.works[0].key}.json`);
+        akey = w.authors?.[0]?.author?.key?.split('/').pop();
+      }
+    } catch (e) { /* not found */ }
+  }
+  if (my !== reqId) return;
+  if (!akey) return status('No book found for that ISBN.');
+  loadAuthor(akey, `Found via ISBN ${esc(isbn)}${title ? ` — <b>${esc(title)}</b>` : ''}`);
+}
+
+$('#results').addEventListener('click', e => {
+  const el = e.target.closest('[data-akey]');
+  if (!el) return;
+  const via = el.dataset.via ? `Found via the book <b>${esc(el.dataset.via)}</b>` : '';
+  loadAuthor(el.dataset.akey, via);
+});
+
+/* ---------------- WIKIDATA ---------------- */
+function wdTime(v){
+  if (!v?.time) return null;
+  const m = v.time.match(/^([+-])(\d+)-(\d\d)-(\d\d)/);
+  if (!m) return null;
+  const y = parseInt(m[2], 10), mo = +m[3], d = +m[4], bc = m[1] === '-';
+  let text;
+  if (v.precision >= 11 && mo && d) text = `${d} ${MONTHS[mo-1]} ${y}`;
+  else if (v.precision === 10 && mo) text = `${MONTHS[mo-1]} ${y}`;
+  else if (v.precision === 8) text = `${Math.floor(y/10)*10}s`;
+  else if (v.precision === 7) text = `${Math.ceil(y/100)}th century`;
+  else text = `${y}`;
+  return {text: text + (bc ? ' BC' : ''), y: bc ? -y : y, m: v.precision >= 10 ? mo : 0, d: v.precision >= 11 ? d : 0};
+}
+
+async function getWikidata(author){
+  let qid = author.remote_ids?.wikidata;
+  if (!qid){
+    try {
+      const s = await getJSON(`${WD}?action=wbsearchentities&search=${enc(author.name)}&language=en&type=item&limit=7&format=json&origin=*`);
+      const hit = (s.search || []).find(x => /writer|novelist|author|poet|playwright|essayist|journalist|dramatist|screenwriter|illustrator/i.test(x.description || ''));
+      qid = hit?.id;
+    } catch (e) {}
+  }
+  if (!qid) return null;
+
+  const e = await getJSON(`${WD}?action=wbgetentities&ids=${qid}&props=labels|descriptions|claims|sitelinks|aliases&languages=en&sitefilter=enwiki&format=json&origin=*`);
+  const ent = e.entities?.[qid];
+  if (!ent || 'missing' in ent) return null;
+  const c = ent.claims || {};
+  const stmts = p => (c[p] || []).filter(s => s.rank !== 'deprecated');
+  const best = p => { const a = stmts(p); return a.find(s => s.rank === 'preferred') || a[0]; };
+  const ids = p => stmts(p).map(s => s.mainsnak?.datavalue?.value?.id).filter(Boolean);
+  const val = p => best(p)?.mainsnak?.datavalue?.value;
+
+  const residenceStmts = stmts('P551');
+  const currentRes = residenceStmts.filter(s => !s.qualifiers?.P582).map(s => s.mainsnak?.datavalue?.value?.id).filter(Boolean);
+
+  const raw = {
+    gender: ids('P21'), citizenship: ids('P27'), birthPlace: ids('P19'), deathPlace: ids('P20'),
+    residence: currentRes, occupation: ids('P106'), genres: ids('P136'), languages: ids('P1412'),
+    awards: ids('P166'), notable: ids('P800'), movement: ids('P135')
+  };
+  const all = [...new Set(Object.values(raw).flat())];
+  const labels = {};
+  for (let i = 0; i < all.length; i += 50){
+    try {
+      const r = await getJSON(`${WD}?action=wbgetentities&ids=${all.slice(i, i+50).join('|')}&props=labels&languages=en&format=json&origin=*`);
+      for (const [k, v] of Object.entries(r.entities || {})) if (v.labels?.en) labels[k] = v.labels.en.value;
+    } catch (e) {}
+  }
+  const L = arr => [...new Set(arr.map(id => labels[id]).filter(Boolean))];
+
+  const out = {qid, description: ent.descriptions?.en?.value || ''};
+  for (const k in raw) out[k] = L(raw[k]);
+  out.birth = wdTime(val('P569'));
+  out.death = wdTime(val('P570'));
+  out.website = val('P856');
+  out.image = val('P18');
+  out.aliases = (ent.aliases?.en || []).map(a => a.value);
+  out.enwiki = ent.sitelinks?.enwiki?.title;
+  return out;
+}
+
+async function getWikiSummary(title){
+  try {
+    const s = await getJSON(`${WP}/api/rest_v1/page/summary/${enc(title.replace(/ /g, '_'))}`);
+    if (s.type === 'disambiguation') return null;
+    return {extract: s.extract, url: s.content_urls?.desktop?.page, thumb: s.thumbnail?.source, desc: s.description, title: s.title};
+  } catch (e) { return null; }
+}
+
+/* ---------------- GENRE CLASSIFIER ---------------- */
+const GENRES = [
+  ['Poetry', /\bpoe(try|ms?)\b|\bverse\b|sonnets/],
+  ['Drama & Plays', /\bdrama\b|\bplays\b|\btheat(er|re)\b|tragedies/],
+  ['Short Stories', /short stories/],
+  ['Science Fiction', /science fiction|sci-fi|dystopia|cyberpunk|space opera|time travel/],
+  ['Fantasy', /\bfantasy\b|fantastic fiction|\bmagic\b|wizards|dragons/],
+  ['Horror', /\bhorror\b|ghost stories|vampires|supernatural/],
+  ['Mystery & Crime', /myster|detective|\bcrime\b|murder|police procedural/],
+  ['Thriller & Suspense', /thriller|suspense|espionage|\bspy\b|spies/],
+  ['Romance', /\bromance\b|love stories/],
+  ['Historical Fiction', /historical fiction|fiction, historical/],
+  ["Children's & Young Adult", /juvenile|children|young adult|picture books|\bteen/],
+  ['Biography & Memoir', /biograph|memoir/],
+  ['Literary Fiction', /\bfiction\b|\bnovels?\b/],
+  ['History', /\bhistory\b/],
+  ['Philosophy & Religion', /philosoph|religio|theolog|spiritual/],
+  ['Science & Nature', /\bscience\b|nature|biology|physics|mathemat|ecology/],
+  ['Essays & Non-fiction', /essays|criticism|politic|social|econom|psycholog|self-help|travel|non-?fiction/]
+];
+function classify(subjects){
+  if (!subjects?.length) return 'Uncategorised';
+  const s = subjects.join(' | ').toLowerCase();
+  for (const [g, re] of GENRES) if (re.test(s)) return g;
+  return 'Other';
+}
+
+/* ---------------- LOAD AUTHOR ---------------- */
+async function loadAuthor(olid, via){
+  const my = ++reqId;
+  $('#results').innerHTML = ''; $('#author').innerHTML = '';
+  status('Gathering author details…', true);
+  try {
+    let a = await getJSON(`${OL}/authors/${olid}.json`);
+    if (a.type?.key === '/type/redirect' && a.location){
+      olid = a.location.split('/').pop();
+      a = await getJSON(`${OL}/authors/${olid}.json`);
+    }
+    const [worksRes, wd] = await Promise.all([
+      getJSON(`${OL}/search.json?author_key=${olid}&fields=key,title,subject,first_publish_year,cover_i,edition_count&sort=editions&limit=150`).catch(() => ({docs: []})),
+      getWikidata(a).catch(() => null)
+    ]);
+    const wiki = wd?.enwiki ? await getWikiSummary(wd.enwiki) : null;
+    if (my !== reqId) return;
+
+    // de-duplicate works by normalised title (keeps the most-published edition)
+    const seen = new Set();
+    const books = [];
+    for (const w of worksRes.docs || []){
+      const norm = (w.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!norm || seen.has(norm)) continue;
+      seen.add(norm);
+      books.push({...w, genre: classify(w.subject)});
+    }
+    currentBooks = books;
+    currentAuthorName = a.name || a.personal_name || 'Unknown author';
+    status('');
+    renderAuthor(a, olid, wd, wiki, books, via);
+  } catch (err) {
+    if (my === reqId) status(`<span class="error">Could not load this author: ${esc(err.message)}</span>`);
+  }
+}
+
+function age(b, d){
+  if (!b || b.y == null) return null;
+  const now = new Date();
+  const e = d || {y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate()};
+  if (e.y == null) return null;
+  let n = e.y - b.y;
+  if (b.m && e.m && (e.m < b.m || (e.m === b.m && b.d && e.d && e.d < b.d))) n--;
+  return n >= 0 && n < 130 ? n : null;
+}
+function textOf(x){ return typeof x === 'string' ? x : x?.value || ''; }
+function cap(s){ return s ? s[0].toUpperCase() + s.slice(1) : s; }
+function chipList(arr, cls = ''){ return `<div class="chips">${arr.map(x => `<span class="chip ${cls}">${esc(cap(x))}</span>`).join('')}</div>`; }
+function fact(k, v, wide){ return v ? `<div class="fact${wide ? ' wide' : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>` : ''; }
+
+function renderAuthor(a, olid, wd, wiki, books, via){
+  const name = currentAuthorName;
+  const bornText = wd?.birth?.text || a.birth_date;
+  const deathText = wd?.death?.text || a.death_date;
+  const isDead = !!deathText;
+  const ag = age(wd?.birth, wd?.death);
+
+  // portrait
+  let img = '';
+  if (a.photos?.some(p => p > 0)) img = `https://covers.openlibrary.org/a/id/${a.photos.find(p => p > 0)}-L.jpg`;
+  else if (wd?.image) img = `https://commons.wikimedia.org/wiki/Special:FilePath/${enc(wd.image)}?width=340`;
+  else if (wiki?.thumb) img = wiki.thumb;
+  const initials = name.split(/\s+/).map(w => w[0]).slice(0, 2).join('');
+  const portrait = img
+    ? `<img class="portrait" src="${esc(img)}" alt="${esc(name)}" onerror="this.outerHTML='<div class=portrait>${esc(initials)}</div>'">`
+    : `<div class="portrait">${esc(initials)}</div>`;
+
+  // genres: Wikidata first, else derived from books
+  let genres = wd?.genres?.length ? wd.genres : [];
+  if (!genres.length){
+    const counts = {};
+    books.forEach(b => { if (!['Uncategorised', 'Other'].includes(b.genre)) counts[b.genre] = (counts[b.genre] || 0) + 1; });
+    genres = Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 6).map(x => x[0]);
+  }
+
+  const born = bornText ? esc(bornText) + (wd?.birthPlace?.length ? ` <span class="src">in</span> ${esc(wd.birthPlace.join(', '))}` : '') + (!isDead && ag != null ? ` <span class="src">(age ${ag})</span>` : '') : '';
+  const died = isDead ? esc(deathText) + (wd?.deathPlace?.length ? ` <span class="src">in</span> ${esc(wd.deathPlace.join(', '))}` : '') + (ag != null ? ` <span class="src">(aged ${ag})</span>` : '') : '';
+  const location = !isDead && wd?.residence?.length ? esc(wd.residence.join(', ')) + ' <span class="src">(last recorded residence)</span>' : '';
+  const aliases = [...new Set([...(a.alternate_names || []), ...(wd?.aliases || [])])].filter(x => x !== name).slice(0, 8);
+
+  const awards = wd?.awards || [];
+  const awardsHtml = awards.length
+    ? chipList(awards.slice(0, 6), 'gold') + (awards.length > 6 ? `<details><summary>Show all ${awards.length} awards</summary>${chipList(awards.slice(6), 'gold')}</details>` : '')
+    : '';
+
+  const facts = [
+    fact('Born', born),
+    fact('Died', died),
+    !isDead && bornText ? fact('Status', 'Living') : '',
+    fact('Gender', esc(cap(wd?.gender?.join(', ')))),
+    fact('Nationality', esc(wd?.citizenship?.join(', '))),
+    fact('Current location', location),
+    fact('Occupation', esc(wd?.occupation?.slice(0, 5).map(cap).join(', '))),
+    fact('Writing languages', esc(wd?.languages?.join(', '))),
+    fact('Works on record', books.length ? `${books.length} titles` : ''),
+    fact('Literary movement', esc(wd?.movement?.join(', '))),
+    fact('Writing genres', genres.length ? chipList(genres) : '', true),
+    fact('Notable works', wd?.notable?.length ? esc(wd.notable.join(' · ')) : '', true),
+    fact('Awards &amp; honours', awardsHtml, true),
+    fact('Also known as', aliases.length ? esc(aliases.join(' · ')) : '', true)
+  ].join('');
+
+  // biography
+  let bioHtml = '';
+  if (wiki?.extract) bioHtml = `<p>${esc(wiki.extract)}</p><div class="src">Source: Wikipedia</div>`;
+  else if (textOf(a.bio)) bioHtml = paragraphs(textOf(a.bio)) + '<div class="src">Source: Open Library</div>';
+  else bioHtml = '<p class="src">No biography available.</p>';
+
+  const links = [
+    wiki?.url && `<a href="${esc(wiki.url)}" target="_blank" rel="noopener">Wikipedia</a>`,
+    `<a href="${OL}/authors/${esc(olid)}" target="_blank" rel="noopener">Open Library</a>`,
+    wd?.qid && `<a href="https://www.wikidata.org/wiki/${esc(wd.qid)}" target="_blank" rel="noopener">Wikidata</a>`,
+    wd?.website && `<a href="${esc(wd.website)}" target="_blank" rel="noopener">Official website</a>`,
+    ...(a.links || []).slice(0, 3).map(l => l.url && /^https?:/.test(l.url) ? `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title || 'Link')}</a>` : '')
+  ].filter(Boolean).join('');
+
+  $('#author').innerHTML = `
+    <article class="profile">
+      ${via ? `<div class="found-note">${via}</div>` : ''}
+      <div class="p-head">
+        ${portrait}
+        <div style="flex:1">
+          <h2>${esc(name)}</h2>
+          <div class="p-desc">${esc(cap(wd?.description || wiki?.desc || ''))}</div>
+          <div class="facts">${facts}</div>
+        </div>
+      </div>
+      <div class="bio">
+        <h3>Biography</h3>
+        ${bioHtml}
+        <div class="links">${links}</div>
+      </div>
+      <div class="books">
+        <h3>Books by ${esc(name)}</h3>
+        ${books.length ? `<div class="tabs" id="tabs"></div><div class="grid" id="bookGrid"></div>` : '<div class="empty">No books found for this author.</div>'}
+      </div>
+    </article>`;
+  if (books.length) renderTabs(books);
+}
+
+/* ---------------- TABS & BOOKS ---------------- */
+function renderTabs(books){
+  const counts = {};
+  books.forEach(b => counts[b.genre] = (counts[b.genre] || 0) + 1);
+  const order = [...GENRES.map(g => g[0]), 'Other', 'Uncategorised'].filter(g => counts[g]);
+  const tabs = [['All', books.length], ...order.map(g => [g, counts[g]])];
+  $('#tabs').innerHTML = tabs.map(([g, n], i) =>
+    `<button class="tab${i === 0 ? ' active' : ''}" data-genre="${esc(g)}">${esc(g)}<span class="n">${n}</span></button>`).join('');
+  $('#tabs').onclick = e => {
+    const t = e.target.closest('.tab'); if (!t) return;
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+    showBooks(t.dataset.genre);
+  };
+  showBooks('All');
+}
+
+const SPINE = ['#8b3a2b','#2f5d62','#5b4b8a','#7d5a1e','#3d6b3a','#9a4f6e','#35506b'];
+function coverHtml(b, size = 'M'){
+  if (b.cover_i) return `<img class="cover" loading="lazy" src="https://covers.openlibrary.org/b/id/${b.cover_i}-${size}.jpg" alt="${esc(b.title)}">`;
+  const color = SPINE[[...b.title].reduce((s, c) => s + c.charCodeAt(0), 0) % SPINE.length];
+  return `<div class="cover ph" style="background:${color}">${esc(b.title)}</div>`;
+}
+
+function showBooks(genre){
+  const list = genre === 'All' ? currentBooks : currentBooks.filter(b => b.genre === genre);
+  $('#bookGrid').innerHTML = list.map(b => `
+    <button class="book" data-key="${esc(b.key)}">
+      ${coverHtml(b)}
+      <div class="bt">${esc(b.title)}</div>
+      <div class="by">${b.first_publish_year || ''}${genre === 'All' ? (b.first_publish_year ? ' · ' : '') + esc(b.genre) : ''}</div>
+    </button>`).join('');
+  $('#bookGrid').onclick = e => {
+    const el = e.target.closest('.book');
+    if (el) openBook(el.dataset.key);
+  };
+}
+
+/* ---------------- BOOK SUMMARY MODAL ---------------- */
+function cleanDesc(t){
+  return t.split(/\n-{4,}/)[0]                       // drop "----" footers
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1')  // markdown links → text
+    .replace(/\[([^\]]+)\]\[\d+\]/g, '$1')
+    .replace(/^\s*\[\d+\]:.*$/gm, '')
+    .replace(/\(\s*source\s*\)|\(\[source\]\)/gi, '')
+    .trim();
+}
+function paragraphs(t){
+  return cleanDesc(t).split(/\n\s*\n|\r\n\r\n/).map(p => p.trim()).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('');
+}
+
+async function wikiBookSummary(title, author){
+  try {
+    const s = await getJSON(`${WP}/w/api.php?action=query&list=search&srsearch=${enc(`"${title}" ${author}`)}&srlimit=3&format=json&origin=*`);
+    const norm = x => x.toLowerCase().replace(/\(.*?\)/g, '').replace(/[^a-z0-9]/g, '');
+    const hit = (s.query?.search || []).find(r => norm(r.title).includes(norm(title)) || norm(title).includes(norm(r.title)));
+    if (!hit) return null;
+    const sum = await getWikiSummary(hit.title);
+    if (!sum?.extract) return null;
+    if (!/novel|book|story|stories|play|poem|collection|memoir|series|fiction|work/i.test((sum.desc || '') + ' ' + sum.extract.slice(0, 300))) return null;
+    return sum;
+  } catch (e) { return null; }
+}
+
+async function openBook(key){
+  const b = currentBooks.find(x => x.key === key);
+  if (!b) return;
+  $('#modalBg').classList.add('open');
+  const head = `
+    <div class="m-body">
+      ${coverHtml(b, 'L')}
+      <div style="flex:1;min-width:0">
+        <h2>${esc(b.title)}</h2>
+        <div class="m-meta">by ${esc(currentAuthorName)}${b.first_publish_year ? ' · First published ' + b.first_publish_year : ''}${b.edition_count ? ' · ' + b.edition_count + ' editions' : ''}<br>Genre: ${esc(b.genre)}</div>
+        <div class="summary" id="summary"><div class="spinner" style="margin:10px 0"></div></div>
+      </div>
+    </div>`;
+  $('#modalContent').innerHTML = head;
+
+  let html = '';
+  try {
+    const w = await getJSON(`${OL}${key}.json`);
+    const desc = textOf(w.description);
+    if (desc && cleanDesc(desc).length > 40){
+      html = `<h3>Story summary</h3>${paragraphs(desc)}<div class="src">Source: Open Library</div>`;
+    }
+    if (!html){
+      const wk = await wikiBookSummary(b.title, currentAuthorName);
+      if (wk) html = `<h3>Story summary</h3><p>${esc(wk.extract)}</p><div class="src">Source: <a href="${esc(wk.url)}" target="_blank" rel="noopener">Wikipedia</a></div>`;
+    }
+    if (!html) html = `<h3>Story summary</h3><p class="src">No summary is available for this book yet.</p>`;
+    const subjects = (w.subjects || b.subject || []).filter(s => s.length < 40).slice(0, 12);
+    if (subjects.length) html += `<h3 style="margin-top:16px">Subjects</h3>${chipList(subjects)}`;
+    html += `<div class="links" style="margin-top:16px"><a href="${OL}${esc(key)}" target="_blank" rel="noopener">View on Open Library</a></div>`;
+  } catch (err) {
+    html = `<p class="error">Could not load the summary: ${esc(err.message)}</p>`;
+  }
+  const el = document.getElementById('summary');
+  if (el) el.innerHTML = html;
+}
+
+function closeModal(){ $('#modalBg').classList.remove('open'); }
+$('#closeModal').onclick = closeModal;
+$('#modalBg').addEventListener('click', e => { if (e.target.id === 'modalBg') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>
